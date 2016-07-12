@@ -16,9 +16,9 @@ TOUCHPAD_SCALING=10
 # -------- end of configuration -------#
 
 # -------- auto-detect mouse -------#
-# select all slave pointers that are not the Virtual core pointer, 
+# select all slave pointers that are not the Virtual core pointer,
 # nor a touchscreen, nor the touchpad:
-MOUSE=$(xinput --list --short | grep "slave  pointer" | egrep -iv "Virtual core|touchscreen" | grep -v "Virtual core" | grep -iv "$TOUCHPAD_STRING" | cut -f 1 | cut -d" " -f 5- | sed 's/\s\+$//g')
+MOUSE=$(xinput --list --short | grep "slave  pointer" | egrep -iv "Virtual core|touchscreen" | grep -v "Virtual core" | grep -iv "$TOUCHPAD_STRING" | cut -f 2 | sed 's/id=//' | cut -d" " -f 5- | sed 's/\s\+$//g')
 #edit this section if needed:
 #MOUSE="YOUR-MOUSE-IDENTIFIER"
 
@@ -47,18 +47,18 @@ CURRENTSPEED=100
 
 store_speed ()
 {
-	echo "CurrenSpeed: $CURRENTSPEED" >$CURRENTSPEEDFILE
-	echo "# this is the current speed-state for mouse-speed" >>$CURRENTSPEEDFILE
+	echo "CurrenSpeed: $CURRENTSPEED" >${CURRENTSPEEDFILE}
+	echo "# this is the current speed-state for mouse-speed" >>${CURRENTSPEEDFILE}
 }
 
 #store and read configfile:
-if [ -f $CURRENTSPEEDFILE ] ; then
-	CURRENTSPEED=$(cat $CURRENTSPEEDFILE | grep CurrenSpeed:| cut -d ' ' -f 2 )
+if [ -f ${CURRENTSPEEDFILE} ] ; then
+	CURRENTSPEED=$(cat ${CURRENTSPEEDFILE} | grep CurrenSpeed:| cut -d ' ' -f 2 )
 else
 	echo "Initiate mouse-speed"
 	echo "create state file in $CURRENTSPEEDFILE"
 	store_speed
-	chmod 777 $CURRENTSPEEDFILE
+	chmod 777 ${CURRENTSPEEDFILE}
 fi
 VERBOSE=false
 
@@ -71,7 +71,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # A little magic, necessary when using getopt.
-eval set -- "$PARSED_OPTIONS"
+eval set -- "${PARSED_OPTIONS}"
 
 # Now go through all options with a case and using shift to analyse one argument at a time.
 # $1 identifies the first argument, and when we use shift we discard the first argument, 
@@ -163,7 +163,7 @@ while true; do
       if [ -n "$2" ]; then
         echo "Speed accellerated for $2"
         let CURRENTSPEED=$(($CURRENTSPEED * $((100+$2)) /100))
-        if [ $CURRENTSPEED -lt 3 ]; then
+        if [ ${CURRENTSPEED} -lt 3 ]; then
           CURRENTSPEED=$(($CURRENTSPEED+1))
         fi
       fi
@@ -197,41 +197,41 @@ while true; do
 done
 
 
-if [[ $CURRENTSPEED -gt 100 ]]; then 
+if [[ ${CURRENTSPEED} -gt 100 ]]; then
     echo "SPEED max is 100%"
     CURRENTSPEED=100
 fi
-if [[ $CURRENTSPEED -lt 1 ]]; then 
+if [[ ${CURRENTSPEED} -lt 1 ]]; then
     echo "SPEED min is 1%"
     CURRENTSPEED=1
 fi
 
 store_speed
-echo new Speed: $CURRENTSPEED
+echo new Speed: ${CURRENTSPEED}
 
 MOUSE_DECELERATION=$(bc <<< "scale = 1; $MOUSE_DECELERATION * 100 / $CURRENTSPEED")
-echo new mouse deceleration: $MOUSE_DECELERATION; 
+echo new mouse deceleration: ${MOUSE_DECELERATION};
 TOUCHPAD_DECELERATION=$(bc <<< "scale = 1; $TOUCHPAD_DECELERATION * 100 / $CURRENTSPEED")
-echo new touchpad deceleration: $TOUCHPAD_DECELERATION; 
+echo new touchpad deceleration: ${TOUCHPAD_DECELERATION};
         
 #set touchpad
-TP=$(xinput --list --short | grep -i $TOUCHPAD_STRING | cut -f 1 | cut -d" " -f 5- | sed 's/\s\+$//g')
+TP=$(xinput --list --short | grep -i ${TOUCHPAD_STRING} | cut -f 1 | cut -d" " -f 5- | sed 's/\s\+$//g')
 if [ "$TP" ]; then
-  if [ $VERBOSE == true ]; then
-    echo setting speed for $TP
+  if [ ${VERBOSE} == true ]; then
+    echo setting speed for ${TP}
     echo was before:
     xinput --list-props "$TP"|grep Accel
   fi
-  ( $VERBOSE && set -x
-  xinput --set-prop "$TP" "Device Accel Constant Deceleration" $TOUCHPAD_DECELERATION
-  xinput --set-prop "$TP" "Device Accel Velocity Scaling" $TOUCHPAD_SCALING
+  ( ${VERBOSE} && set -x
+  xinput --set-prop "$TP" "Device Accel Constant Deceleration" ${TOUCHPAD_DECELERATION}
+  xinput --set-prop "$TP" "Device Accel Velocity Scaling" ${TOUCHPAD_SCALING}
   )
-  if [ $VERBOSE == true ]; then
+  if [ ${VERBOSE} == true ]; then
     echo touchpad now set to:
     xinput --list-props "$TP"|grep Accel
   fi
-elif [ $VERBOSE == true ]; then
-  echo 'Touchpad device "'$TOUCHPAD_STRING'" not in xinput --list'
+elif [ ${VERBOSE} == true ]; then
+  echo 'Touchpad device "'${TOUCHPAD_STRING}'" not in xinput --list'
   echo call '"'$0 -help'"' for help
   echo
 fi
@@ -239,17 +239,17 @@ fi
 #set mouse
 if [ "$MOUSE" ]; then
  echo "$MOUSE"|while read -r M; do
-  echo setting mouse-speed for '"'$M'"'
-  ( $VERBOSE && set -x
-  xinput --set-prop "pointer:$M" "Device Accel Constant Deceleration" $MOUSE_DECELERATION
-  xinput --set-prop "pointer:$M" "Device Accel Velocity Scaling" $MOUSE_SCALING
+  echo setting mouse-speed for '"'${M}'"'
+  ( ${VERBOSE} && set -x
+  xinput --set-prop "$M" "Device Accel Constant Deceleration" ${MOUSE_DECELERATION}
+  xinput --set-prop "$M" "Device Accel Velocity Scaling" ${MOUSE_SCALING}
   )
-  if [ $VERBOSE == true ]; then
+  if [ ${VERBOSE} == true ]; then
     echo mouse now set to:
     xinput --list-props "$M"|grep Accel
   fi
  done
-elif [ $VERBOSE == true ]; then
+elif [ ${VERBOSE} == true ]; then
   echo 'Mouse device not found in xinput --list'
   echo "If you have a mouse installed that wasn't found,"
   echo "call "'"'$0 --help'"'" for help"
